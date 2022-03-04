@@ -1,35 +1,54 @@
 /*
-cron 0 0 * * * jd_dpqd.js
 店铺签到，各类店铺签到，有新的店铺直接添加token即可
 搬运cui521大佬脚本，请勿外传！！！
-环境变量:
-DPQDTK: token1&token2
-仓库不再提供token
+自带的Token List网址已不可用
+由Shy_yhS更新店铺数据，当日签到超过20家则火爆
+更新日期:2021-10-28 00:19
+cron 15 0,22 * * * jd_dpsign.js, tag=店铺签到diy
 */
-let token = []
-if (process.env.DPQDTK) {
-  if (process.env.DPQDTK.includes('\n')) {
-    token = [...process.env.DPQDTK.split('\n'),...token]
-  } else {
-    token = [...process.env.DPQDTK.split('&'),...token]
-  }
-}
-if (!token.length) {
-  console.log('无店铺签到token,不执行.需自备token:环境变DPQDTK: tk1&tk2.')
-  return
-}
 const $ = new Env('店铺签到');
+
 const notify = $.isNode() ? require('./sendNotify') : '';
 //Node.js用户请在jdCookie.js处填写京东ck;
 const jdCookieNode = $.isNode() ? require('./jdCookie.js') : '';
 //IOS等用户直接用NobyDa的jd cookie
-let cookiesArr = [], cookie = '', allMessage = '', message;
+let cookiesArr = [], cookie = '', message;
+
 const JD_API_HOST = 'https://api.m.jd.com/api?appid=interCenter_shopSign';
 
 let activityId=''
 let vender=''
 let num=0
 let shopname=''
+
+const token=[
+    
+  "0FA06CDDB52AE05A98F572BC102C051F",
+  "E38AC8DE7886EE40F3A1B5C53EDCEC44",
+  "97C1CE5FD22CC02A52DD6583B3E29F46",
+  "2140C8347C964EA604617E70B1060F88",
+  "93827A0C317FF8388F5323E343561537",
+  "DFBDDD9B4E6EA8429BC3AC83545F1056",
+  "305A6FBB3436A6593F827CFBC6E189D4",
+  "8DC2E6DF1FCF4C8FD95ACEEB3476E863",
+  "CB04CB702DCCEF0E2928E53B12A75A1E",
+  "6370F170657FD72A64011EA562CADA18",
+  "9DE0806161F9094B11379DE3D5E2DA32",
+  "2A06C8033DC59A514506ACA3603C90DA",
+  "4C1FF52453BB0AF757A44FD42004796E",
+  "E32A11E8D0F109206A55188A5DE09C4E",
+  "0BF7EAC82E5FEF41F715BB478A8EA8F2",
+  "ED0E9E159C9A7DB907DE28542D043BB9",
+  "B6D45CBE79819E9EFE01E875B034AE02",
+  "C07A1EC3EF64764AFA183BC09E2F0871",
+  "F820F2B0C74649584CF91D57DD2DE1AB",
+  "DE537A5894A293E1E3010A6AECB158AB",
+  "C1485FB731FEB1CCBDD06B7ACE6E0EE5",
+  "3D71F9D98609851BEF22760E203F8D4B"
+]
+//IOS等用户直接用NobyDa的jd cookie
+
+$.TokenList =[];
 
 if ($.isNode()) {
   Object.keys(jdCookieNode).forEach((item) => {
@@ -51,10 +70,19 @@ if ($.isNode()) {
     $.msg($.name, '【提示】请先获取京东账号一cookie\n直接使用NobyDa的京东签到获取', 'https://bean.m.jd.com/bean/signIndex.action', {"open-url": "https://bean.m.jd.com/bean/signIndex.action"});
     return;
   }
+  
+	$.TokenLists = []
+  
+        //$.innerTokenList = await getStoreTokee('https://zy.kejiwanjia.com/jd_dpqiandao.php');
+        $.innerTokenList = token
+	
+	$.TokenLists.push(...$.TokenList,...$.innerTokenList);
+
+	
   for (let i = 0; i < cookiesArr.length; i++) {
     if (cookiesArr[i]) {
       cookie = cookiesArr[i];
-      $.UserName = decodeURIComponent(cookie.match(/pt_pin=([^; ]+)(?=;?)/) && cookie.match(/pt_pin=([^; ]+)(?=;?)/)[1])
+      $.UserName = decodeURIComponent(cookie.match(/pt_pin=(.+?);/) && cookie.match(/pt_pin=(.+?);/)[1])
       $.index = i + 1;
       $.isLogin = true;
       $.nickName = '';
@@ -63,18 +91,16 @@ if ($.isNode()) {
       console.log(`\n******开始【京东账号${$.index}】${$.nickName || $.UserName}*********\n`);
       if (!$.isLogin) {
         $.msg($.name, `【提示】cookie已失效`, `京东账号${$.index} ${$.nickName || $.UserName}\n请重新登录获取\nhttps://bean.m.jd.com/bean/signIndex.action`, {"open-url": "https://bean.m.jd.com/bean/signIndex.action"});
+
         if ($.isNode()) {
           await notify.sendNotify(`${$.name}cookie已失效 - ${$.UserName}`, `京东账号${$.index} ${$.UserName}\n请重新登录获取cookie`);
         }
         continue
       }
-      await dpqd()
-      await showMsg()
-      await $.wait(1500)
+      await babel_diy_zeus();
+	  await showMsg()
+      //if(i  <1 ) {await showMsg()}
     }
-  }
-  if ($.isNode() && allMessage) {
-    await notify.sendNotify(`${$.name}`, `${allMessage}`)
   }
 })()
     .catch((e) => {
@@ -85,17 +111,19 @@ if ($.isNode()) {
     })
 
 //开始店铺签到
-async function dpqd(){
-  for (var j = 0; j < token.length; j++) {
+async function babel_diy_zeus(){
+	
+  for (var j = 0; j < $.TokenLists.length; j++) {
+	  
+	await $.wait(3000);  
     num=j+1
-    if (token[j]=='') {continue}
-    getUA()
-    await getvenderId(token[j])
+    if ($.TokenLists[j]=='') {continue}
+    await getvenderId($.TokenLists[j])
     if (vender=='') {continue}
     await getvenderName(vender)
-    await getActivityInfo(token[j],vender)
-    await signCollectGift(token[j],vender,activityId)
-    await taskUrl(token[j],vender)
+    await getActivityInfo($.TokenLists[j],vender)
+    await signCollectGift($.TokenLists[j],vender,activityId)
+    await taskUrl($.TokenLists[j],vender)
   }
 }
 
@@ -110,8 +138,7 @@ function getvenderId(token) {
         "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
         "cookie": cookie,
         "referer": 'https://h5.m.jd.com/',
-        "User-Agent": $.UA
-        // "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
+        "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
       }
     }
     $.get(options, (err, resp, data) => {
@@ -149,8 +176,7 @@ function getvenderName(venderId) {
         "accept-encoding": "gzip, deflate, br",
         "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
         "cookie": cookie,
-        "User-Agent": $.UA
-        // "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
+        "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
       }
     }
     $.get(options, (err, resp, data) => {
@@ -185,9 +211,8 @@ function getActivityInfo(token,venderId) {
         "accept-encoding": "gzip, deflate",
         "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
         "cookie": cookie,
-        "referer": `https://h5.m.jd.com/babelDiy/Zeus/2PAAf74aG3D61qvfKUM5dxUssJQ9/index.html?token=${token}&sceneval=2&jxsid=16105853541009626903&cu=true&utm_source=kong&utm_medium=jingfen&utm_campaign=t_1001280291_&utm_term=fa3f8f38c56f44e2b4bfc2f37bce9713`,
-        "User-Agent": $.UA
-        // "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
+         "referer": `https://h5.m.jd.com/babelDiy/Zeus/2PAAf74aG3D61qvfKUM5dxUssJQ9/index.html?token=${token}&sceneval=2&jxsid=16178634353215523301&cu=true&utm_source=kong&utm_medium=jingfen&utm_campaign=t_2009753434_&utm_term=fa3f8f38c56f44e2b4bfc2f37bce9713`,
+        "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
       }
     }
     $.get(options, (err, resp, data) => {
@@ -207,8 +232,8 @@ function getActivityInfo(token,venderId) {
             const discount=data.data.continuePrizeRuleList[i].prizeList[0].discount
             mes += "签到"+level+"天,获得"+discount+'豆'
           }
-          // console.log(message+mes+'\n')
-          // message += mes+'\n'
+          //console.log(message+mes+'\n')
+          //message += mes+'\n'
         }
       } catch (e) {
         $.logErr(e, resp);
@@ -229,9 +254,8 @@ function signCollectGift(token,venderId,activitytemp) {
         "accept-encoding": "gzip, deflate",
         "accept-language": "zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7",
         "cookie": cookie,
-        "referer": `https://h5.m.jd.com/babelDiy/Zeus/2PAAf74aG3D61qvfKUM5dxUssJQ9/index.html?token=${token}&sceneval=2&jxsid=16105853541009626903&cu=true&utm_source=kong&utm_medium=jingfen&utm_campaign=t_1001280291_&utm_term=fa3f8f38c56f44e2b4bfc2f37bce9713`,
-        "User-Agent": $.UA
-        // "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
+        "referer": `https://h5.m.jd.com/babelDiy/Zeus/2PAAf74aG3D61qvfKUM5dxUssJQ9/index.html?token=${token}&sceneval=2&jxsid=16178634353215523301&cu=true&utm_source=kong&utm_medium=jingfen&utm_campaign=t_2009753434_&utm_term=fa3f8f38c56f44e2b4bfc2f37bce9713`,
+        "User-Agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
       }
     }
     $.get(options, (err, resp, data) => {
@@ -263,8 +287,7 @@ function taskUrl(token,venderId) {
         "accept-language": "zh-CN,zh;q=0.9",
         "cookie": cookie,
         "referer": `https://h5.m.jd.com/`,
-        "User-Agent": $.UA
-        // "user-agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
+        "user-agent": `Mozilla/5.0 (Linux; U; Android 10; zh-cn; MI 8 Build/QKQ1.190828.002) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/79.0.3945.147 Mobile Safari/537.36 XiaoMi/MiuiBrowser/13.5.40`
       }
     }
     $.get(options, (err, resp, data) => {
@@ -273,10 +296,10 @@ function taskUrl(token,venderId) {
           console.log(`\n${$.name}: API查询请求失败 ‼️‼️`)
           $.logErr(err);
         } else {
-          //console.log(data)
-          data = JSON.parse(/{(.*)}/g.exec(data)[0])
-          console.log(`已签到：`+data.data.days+`天`)
-          message +=`已签到：`+data.data.days+`天\n`
+            //console.log(data)
+            data = JSON.parse(/{(.*)}/g.exec(data)[0])
+            console.log(`已签到：`+data.data.days+`天`)
+            message +=`已签到：`+data.data.days+`天\n`
         }
       } catch (e) {
         $.logErr(e, resp);
@@ -290,7 +313,7 @@ function taskUrl(token,venderId) {
 async function showMsg() {
   if ($.isNode()) {
     $.msg($.name, '', `【京东账号${$.index}】${$.nickName}\n${message}`);
-    allMessage += `【京东账号${$.index}】${$.nickName}\n${message}${$.index !== cookiesArr.length ? '\n\n' : ''}`;
+    //await notify.sendNotify(`${$.name} - 账号${$.index} - ${$.nickName}`, `【京东账号${$.index}】${$.nickName}\n${message}`);
   }
 }
 
@@ -321,11 +344,7 @@ function TotalBean() {
               $.isLogin = false; //cookie过期
               return
             }
-            if (data['retcode'] === 0) {
-              $.nickName = data['base'].nickname;
-            } else {
-              $.nickName = $.UserName
-            }
+            $.nickName = (data['base'] && data['base'].nickname) || $.UserName;
           } else {
             console.log(`京东服务器返回空数据`)
           }
@@ -351,16 +370,43 @@ function jsonParse(str) {
   }
 }
 
-function randomString(e) {
-  e = e || 32;
-  let t = "abcdef0123456789", a = t.length, n = "";
-  for (i = 0; i < e; i++)
-    n += t.charAt(Math.floor(Math.random() * a));
-  return n
-}
-
-function getUA() {
-  $.UA = `jdapp;iPhone;10.2.2;13.1.2;${randomString(40)};M/5.0;network/wifi;ADID/;model/iPhone8,1;addressid/2308460611;appBuild/167863;jdSupportDarkMode/0;Mozilla/5.0 (iPhone; CPU iPhone OS 13_1_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1;`
+function getStoreTokee(url) {
+  return new Promise(async resolve => {
+    const options = {
+      "url": `${url}?${new Date()}`,
+      "timeout": 10000,
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1 Edg/87.0.4280.88"
+      }
+    };
+    if ($.isNode() && process.env.TG_PROXY_HOST && process.env.TG_PROXY_PORT) {
+      const tunnel = require("tunnel");
+      const agent = {
+        https: tunnel.httpsOverHttp({
+          proxy: {
+            host: process.env.TG_PROXY_HOST,
+            port: process.env.TG_PROXY_PORT * 1
+          }
+        })
+      }
+      Object.assign(options, { agent })
+    }
+    let res = []
+    $.get(options, async (err, resp, data) => {
+      try {
+        if (err) {
+        } else {
+          if (data) res = JSON.parse(data)
+        }
+      } catch (e) {
+        // $.logErr(e, resp)
+      } finally {
+        resolve(res || []);
+      }
+    })
+    await $.wait(10000)
+    resolve(res);
+  })
 }
 
 // prettier-ignore
